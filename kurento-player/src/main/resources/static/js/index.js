@@ -67,8 +67,6 @@ ws.onmessage = function(message) {
 	case 'position':
 		document.getElementById("videoPosition").value = parsedMessage.position;
 		break;
-	case 'iceCandidate':
-		break;
 	default:
 		if (state == I_AM_STARTING) {
 			setState(I_CAN_START);
