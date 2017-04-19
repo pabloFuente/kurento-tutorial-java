@@ -23,6 +23,8 @@ var response;
 var callerMessage;
 var from;
 
+var USER_SELECTED;
+
 var registerName = null;
 var registerState = null;
 const NOT_REGISTERED = 0;
@@ -31,19 +33,20 @@ const REGISTERED = 2;
 
 function setRegisterState(nextState) {
 	switch (nextState) {
-	case NOT_REGISTERED:
-		enableButton('#register', 'register()');
-		setCallState(NO_CALL);
-		break;
-	case REGISTERING:
-		disableButton('#register');
-		break;
-	case REGISTERED:
-		disableButton('#register');
-		setCallState(NO_CALL);
-		break;
-	default:
-		return;
+		case NOT_REGISTERED:
+			enableButton('#register', 'register()');
+			setCallState(NO_CALL);
+			disableButton('#dropdown-btn');
+			break;
+		case REGISTERING:
+			disableButton('#register');
+			break;
+		case REGISTERED:
+			disableButton('#register');
+			setCallState(NO_CALL);
+			break;
+		default:
+			return;
 	}
 	registerState = nextState;
 }
@@ -55,28 +58,28 @@ const IN_CALL = 2;
 
 function setCallState(nextState) {
 	switch (nextState) {
-	case NO_CALL:
-		enableButton('#call', 'call()');
-		disableButton('#terminate');
-		disableButton('#play');
-		break;
-	case PROCESSING_CALL:
-		disableButton('#call');
-		disableButton('#terminate');
-		disableButton('#play');
-		break;
-	case IN_CALL:
-		disableButton('#call');
-		enableButton('#terminate', 'stop()');
-		disableButton('#play');
-		break;
-	default:
-		return;
+		case NO_CALL:
+			enableButton2('#dropdown-btn');
+			disableButton('#terminate');
+			disableButton('#play');
+			break;
+		case PROCESSING_CALL:
+			disableButton('#dropdown-btn');
+			disableButton('#terminate');
+			disableButton('#play');
+			break;
+		case IN_CALL:
+			disableButton('#dropdown-btn');
+			enableButton('#terminate', 'stop()');
+			disableButton('#play');
+			break;
+		default:
+			return;
 	}
 	callState = nextState;
 }
 
-window.onload = function() {
+window.onload = function () {
 	console = new Console();
 	setRegisterState(NOT_REGISTERED);
 	var drag = new Draggabilly(document.getElementById('videoSmall'));
@@ -85,39 +88,64 @@ window.onload = function() {
 	document.getElementById('name').focus();
 }
 
-window.onbeforeunload = function() {
+window.onbeforeunload = function () {
 	ws.close();
 }
 
-ws.onmessage = function(message) {
+ws.onopen = function () {
+	console.warn("WEBSOCKET READY");
+	setInterval(function () {
+		var message = {
+			id: 'getUsers'
+		};
+		sendMessage(message);
+	}, 2000);
+}
+
+ws.onmessage = function (message) {
 	var parsedMessage = JSON.parse(message.data);
 	console.info('Received message: ' + message.data);
 
 	switch (parsedMessage.id) {
-	case 'resgisterResponse':
-		resgisterResponse(parsedMessage);
-		break;
-	case 'callResponse':
-		callResponse(parsedMessage);
-		break;
-	case 'incomingCall':
-		incomingCall(parsedMessage);
-		break;
-	case 'startCommunication':
-		startCommunication(parsedMessage);
-		break;
-	case 'stopCommunication':
-		console.info('Communication ended by remote peer');
-		stop(true);
-		break;
-	case 'iceCandidate':
-		webRtcPeer.addIceCandidate(parsedMessage.candidate, function(error) {
-			if (error)
-				return console.error('Error adding candidate: ' + error);
-		});
-		break;
-	default:
-		console.error('Unrecognized message', parsedMessage);
+		case 'getUsers':
+			console.warn("MESSAGE RECEIVED");
+			console.warn(parsedMessage);
+			var arrayUsers = JSON.parse(parsedMessage.response);
+			console.warn(arrayUsers);
+			$('#dropdown-menu').empty();
+			if(arrayUsers.length == 0){
+				$("#dropdown-menu").append('<li>¡Vaya! Ningún amigo está libre (O no tienes amigos...)</li>');
+			} else {
+				for (var i in arrayUsers) {
+					console.warn(arrayUsers[i]);
+					$("#dropdown-menu").append('<li class="user-name" onclick="callDropdown(\'' + arrayUsers[i] + '\')">' + arrayUsers[i] + '</li>');
+				}
+			}
+			break;
+		case 'resgisterResponse':
+			resgisterResponse(parsedMessage);
+			break;
+		case 'callResponse':
+			callResponse(parsedMessage);
+			break;
+		case 'incomingCall':
+			incomingCall(parsedMessage);
+			break;
+		case 'startCommunication':
+			startCommunication(parsedMessage);
+			break;
+		case 'stopCommunication':
+			console.info('Communication ended by remote peer');
+			stop(true);
+			break;
+		case 'iceCandidate':
+			webRtcPeer.addIceCandidate(parsedMessage.candidate, function (error) {
+				if (error)
+					return console.error('Error adding candidate: ' + error);
+			});
+			break;
+		default:
+			console.error('Unrecognized message', parsedMessage);
 	}
 }
 
@@ -126,8 +154,8 @@ function resgisterResponse(message) {
 		setRegisterState(REGISTERED);
 	} else {
 		setRegisterState(NOT_REGISTERED);
-		var errorMessage = message.message ? message.message
-				: 'Unknown reason for register rejection.';
+		var errorMessage = message.message ? message.message :
+			'Unknown reason for register rejection.';
 		console.log(errorMessage);
 		alert('Error registering user. See console for further information.');
 	}
@@ -136,13 +164,13 @@ function resgisterResponse(message) {
 function callResponse(message) {
 	if (message.response != 'accepted') {
 		console.info('Call not accepted by peer. Closing call');
-		var errorMessage = message.message ? message.message
-				: 'Unknown reason for call rejection.';
+		var errorMessage = message.message ? message.message :
+			'Unknown reason for call rejection.';
 		console.log(errorMessage);
 		stop();
 	} else {
 		setCallState(IN_CALL);
-		webRtcPeer.processAnswer(message.sdpAnswer, function(error) {
+		webRtcPeer.processAnswer(message.sdpAnswer, function (error) {
 			if (error)
 				return console.error(error);
 		});
@@ -151,7 +179,7 @@ function callResponse(message) {
 
 function startCommunication(message) {
 	setCallState(IN_CALL);
-	webRtcPeer.processAnswer(message.sdpAnswer, function(error) {
+	webRtcPeer.processAnswer(message.sdpAnswer, function (error) {
 		if (error)
 			return console.error(error);
 	});
@@ -161,40 +189,40 @@ function incomingCall(message) {
 	// If bussy just reject without disturbing user
 	if (callState != NO_CALL) {
 		var response = {
-			id : 'incomingCallResponse',
-			from : message.from,
-			callResponse : 'reject',
-			message : 'bussy'
+			id: 'incomingCallResponse',
+			from: message.from,
+			callResponse: 'reject',
+			message: 'bussy'
 		};
 		return sendMessage(response);
 	}
 
 	setCallState(PROCESSING_CALL);
-	if (confirm('User ' + message.from
-			+ ' is calling you. Do you accept the call?')) {
+	if (confirm('User ' + message.from +
+			' is calling you. Do you accept the call?')) {
 		showSpinner(videoInput, videoOutput);
 
 		from = message.from;
 		var options = {
-			localVideo : videoInput,
-			remoteVideo : videoOutput,
-			onicecandidate : onIceCandidate,
-			onerror : onError
+			localVideo: videoInput,
+			remoteVideo: videoOutput,
+			onicecandidate: onIceCandidate,
+			onerror: onError
 		}
 		webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options,
-				function(error) {
-					if (error) {
-						return console.error(error);
-					}
-					webRtcPeer.generateOffer(onOfferIncomingCall);
-				});
+			function (error) {
+				if (error) {
+					return console.error(error);
+				}
+				webRtcPeer.generateOffer(onOfferIncomingCall);
+			});
 
 	} else {
 		var response = {
-			id : 'incomingCallResponse',
-			from : message.from,
-			callResponse : 'reject',
-			message : 'user declined'
+			id: 'incomingCallResponse',
+			from: message.from,
+			callResponse: 'reject',
+			message: 'user declined'
 		};
 		sendMessage(response);
 		stop();
@@ -205,10 +233,10 @@ function onOfferIncomingCall(error, offerSdp) {
 	if (error)
 		return console.error("Error generating the offer");
 	var response = {
-		id : 'incomingCallResponse',
-		from : from,
-		callResponse : 'accept',
-		sdpOffer : offerSdp
+		id: 'incomingCallResponse',
+		from: from,
+		callResponse: 'accept',
+		sdpOffer: offerSdp
 	};
 	sendMessage(response);
 }
@@ -222,11 +250,33 @@ function register() {
 	setRegisterState(REGISTERING);
 
 	var message = {
-		id : 'register',
-		name : name
+		id: 'register',
+		name: name
 	};
 	sendMessage(message);
 	document.getElementById('peer').focus();
+}
+
+function callDropdown(name) {
+
+	USER_SELECTED = name;
+
+	setCallState(PROCESSING_CALL);
+	showSpinner(videoInput, videoOutput);
+
+	var options = {
+		localVideo: videoInput,
+		remoteVideo: videoOutput,
+		onicecandidate: onIceCandidate,
+		onerror: onError
+	}
+	webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options,
+		function (error) {
+			if (error) {
+				return console.error(error);
+			}
+			webRtcPeer.generateOffer(onOfferCall);
+		});
 }
 
 function call() {
@@ -238,18 +288,18 @@ function call() {
 	showSpinner(videoInput, videoOutput);
 
 	var options = {
-		localVideo : videoInput,
-		remoteVideo : videoOutput,
-		onicecandidate : onIceCandidate,
-		onerror : onError
+		localVideo: videoInput,
+		remoteVideo: videoOutput,
+		onicecandidate: onIceCandidate,
+		onerror: onError
 	}
 	webRtcPeer = new kurentoUtils.WebRtcPeer.WebRtcPeerSendrecv(options,
-			function(error) {
-				if (error) {
-					return console.error(error);
-				}
-				webRtcPeer.generateOffer(onOfferCall);
-			});
+		function (error) {
+			if (error) {
+				return console.error(error);
+			}
+			webRtcPeer.generateOffer(onOfferCall);
+		});
 }
 
 function onOfferCall(error, offerSdp) {
@@ -257,10 +307,10 @@ function onOfferCall(error, offerSdp) {
 		return console.error('Error generating the offer');
 	console.log('Invoking SDP offer callback function');
 	var message = {
-		id : 'call',
-		from : document.getElementById('name').value,
-		to : document.getElementById('peer').value,
-		sdpOffer : offerSdp
+		id: 'call',
+		from: document.getElementById('name').value,
+		to: USER_SELECTED,
+		sdpOffer: offerSdp
 	};
 	sendMessage(message);
 }
@@ -273,7 +323,7 @@ function stop(message) {
 
 		if (!message) {
 			var message = {
-				id : 'stop'
+				id: 'stop'
 			}
 			sendMessage(message);
 		}
@@ -289,8 +339,8 @@ function onIceCandidate(candidate) {
 	console.log("Local candidate" + JSON.stringify(candidate));
 
 	var message = {
-		id : 'onIceCandidate',
-		candidate : candidate
+		id: 'onIceCandidate',
+		candidate: candidate
 	};
 	sendMessage(message);
 }
@@ -326,10 +376,14 @@ function enableButton(id, functionName) {
 	$(id).attr('onclick', functionName);
 }
 
+function enableButton2(id) {
+	$(id).attr('disabled', false);
+}
+
 /**
  * Lightbox utility (to display media pipeline image in a modal dialog)
  */
-$(document).delegate('*[data-toggle="lightbox"]', 'click', function(event) {
+$(document).delegate('*[data-toggle="lightbox"]', 'click', function (event) {
 	event.preventDefault();
 	$(this).ekkoLightbox();
 });

@@ -17,6 +17,9 @@
 
 package org.kurento.tutorial.one2onecall;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.web.socket.WebSocketSession;
@@ -33,6 +36,7 @@ public class UserRegistry {
 
   private ConcurrentHashMap<String, UserSession> usersByName = new ConcurrentHashMap<>();
   private ConcurrentHashMap<String, UserSession> usersBySessionId = new ConcurrentHashMap<>();
+  ConcurrentHashMap<String, UserSession> usersOccupiedByName = new ConcurrentHashMap<>();
 
   public void register(UserSession user) {
     usersByName.put(user.getName(), user);
@@ -58,6 +62,18 @@ public class UserRegistry {
       usersBySessionId.remove(session.getId());
     }
     return user;
+  }
+  
+  public List<String> getAllNames(){
+	  return Collections.list(this.usersByName.keys());
+  }
+  
+  public List<String> getAllOccuppiedNames(){
+	  return Collections.list(this.usersOccupiedByName.keys());
+  }
+  
+  public void setBySessionId(UserSession user){
+	  usersBySessionId.put(user.getSession().getId(), user);
   }
 
 }

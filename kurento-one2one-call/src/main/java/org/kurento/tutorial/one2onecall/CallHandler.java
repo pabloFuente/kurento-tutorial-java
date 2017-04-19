@@ -18,6 +18,8 @@
 package org.kurento.tutorial.one2onecall;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.kurento.client.EventListener;
@@ -61,7 +63,7 @@ public class CallHandler extends TextWebSocketHandler {
   public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
     JsonObject jsonMessage = gson.fromJson(message.getPayload(), JsonObject.class);
     UserSession user = registry.getBySession(session);
-
+    
     if (user != null) {
       log.debug("Incoming message from user '{}': {}", user.getName(), jsonMessage);
     } else {
@@ -69,7 +71,41 @@ public class CallHandler extends TextWebSocketHandler {
     }
 
     switch (jsonMessage.get("id").getAsString()) {
+	    case "getUsers":
+	    	try {
+	    	  if (user == null){
+	    		registry.setBySessionId(new UserSession(session, ""));
+	    	   }
+	    	  
+	    	  System.out.println("PETICION DE USUARIOS...");
+	    	  System.out.println("Total de usuarios: " + registry.getAllNames().toString());
+	    	  System.out.println("Usuarios ocupados: " + registry.getAllOccuppiedNames().toString());
+	    	    
+		  	  List<String> myList = new ArrayList<String>();
+		  	  
+		  	  for (int i = 0; i < registry.getAllNames().size(); i++) {
+		  		  if (!(registry.getAllNames().get(i).equals(user.getName()) || registry.getAllOccuppiedNames().contains(registry.getAllNames().get(i)))) {
+		  			  myList.add(registry.getAllNames().get(i));
+		  		  }
+		  	  }
+		  	  
+		  	  JsonObject response = new JsonObject();
+		  	  response.addProperty("id", "getUsers");
+		  	  String r = "[";
+		  	  for (String name : myList){
+		  		  r += "\"" + name + "\",";
+		  	  }
+		  	  if (r.length() > 1) r = r.substring(0, r.length()-1);
+		  	  r += "]";
+		      response.addProperty("response", r);
+		  	  session.sendMessage(new TextMessage(response.toString()));
+	    	}
+	    	catch (Exception e){
+	    		System.out.println("ERROR FATAL: " + e);
+	    	}
+	      break;
       case "register":
+    	  System.out.println("PETICION DE REGISTRO...");
         try {
           register(session, jsonMessage);
         } catch (Throwable t) {
@@ -219,6 +255,7 @@ public class CallHandler extends TextWebSocketHandler {
 
         synchronized (callee) {
           callee.sendMessage(startCommunication);
+          registry.usersOccupiedByName.put(callee.getName(), callee);
         }
 
         pipeline.getCalleeWebRtcEp().gatherCandidates();
@@ -232,9 +269,11 @@ public class CallHandler extends TextWebSocketHandler {
 
         synchronized (calleer) {
           calleer.sendMessage(response);
+          registry.usersOccupiedByName.put(calleer.getName(), calleer);
         }
 
         pipeline.getCallerWebRtcEp().gatherCandidates();
+        
 
       } catch (Throwable t) {
         log.error(t.getMessage(), t);
@@ -274,6 +313,7 @@ public class CallHandler extends TextWebSocketHandler {
       // Both users can stop the communication. A 'stopCommunication'
       // message will be sent to the other peer.
       UserSession stopperUser = registry.getBySession(session);
+      
       if (stopperUser != null) {
         UserSession stoppedUser =
             (stopperUser.getCallingFrom() != null) ? registry.getByName(stopperUser
@@ -285,8 +325,12 @@ public class CallHandler extends TextWebSocketHandler {
                       message.addProperty("id", "stopCommunication");
                       stoppedUser.sendMessage(message);
                       stoppedUser.clear();
+                      
+                      registry.usersOccupiedByName.remove(stoppedUser.getName());
+                      
                     }
                     stopperUser.clear();
+                    registry.usersOccupiedByName.remove(stopperUser.getName());
       }
 
     }
