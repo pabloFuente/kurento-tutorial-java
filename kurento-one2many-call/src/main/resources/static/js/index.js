@@ -58,8 +58,10 @@ function presenterResponse(message) {
 	if (message.response != 'accepted') {
 		var errorMsg = message.message ? message.message : 'Unknow error';
 		console.info('Call not accepted for the following reason: ' + errorMsg);
+		showWarning("Te vas a tener que esperar. Algún notas está ocupando el puesto. Pulsa el botón azul para verle");
 		dispose();
 	} else {
+		hideWarning();
 		webRtcPeer.processAnswer(message.sdpAnswer, function(error) {
 			if (error)
 				return console.error(error);
@@ -71,8 +73,10 @@ function viewerResponse(message) {
 	if (message.response != 'accepted') {
 		var errorMsg = message.message ? message.message : 'Unknow error';
 		console.info('Call not accepted for the following reason: ' + errorMsg);
+		showWarning("Parece que nadie está presentando. ¡Aprovecha para ser el próximo notas!");
 		dispose();
 	} else {
+		hideWarning();
 		webRtcPeer.processAnswer(message.sdpAnswer, function(error) {
 			if (error)
 				return console.error(error);
@@ -211,6 +215,15 @@ function hideSpinner() {
 		arguments[i].poster = './img/webrtc.png';
 		arguments[i].style.background = '';
 	}
+}
+
+function showWarning(innerHtml){
+	$("#warning-msg").html(innerHtml);
+	$("#warning-msg").show();
+}
+
+function hideWarning(message){
+	$("#warning-msg").hide();
 }
 
 /**
