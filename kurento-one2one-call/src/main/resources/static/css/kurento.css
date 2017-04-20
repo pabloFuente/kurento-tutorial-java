@@ -86,3 +86,14 @@ li.user-name {
 li.user-name:hover {
 	background-color: rgba(40, 96, 144, 0.15);
 }
+
+li#nofriends {
+	padding-left: 13px;
+    padding-right: 13px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+#occupied-warning{
+	margin-top: 20px;
+}

@@ -69,6 +69,7 @@ function setCallState(nextState) {
 			disableButton('#play');
 			break;
 		case IN_CALL:
+			hideWarning();
 			disableButton('#dropdown-btn');
 			enableButton('#terminate', 'stop()');
 			disableButton('#play');
@@ -114,7 +115,7 @@ ws.onmessage = function (message) {
 			console.warn(arrayUsers);
 			$('#dropdown-menu').empty();
 			if(arrayUsers.length == 0){
-				$("#dropdown-menu").append('<li>¡Vaya! Ningún amigo está libre (O no tienes amigos...)</li>');
+				$("#dropdown-menu").append('<li id="nofriends">¡Vaya! Ningún amigo está libre (O no tienes amigos...)</li>');
 			} else {
 				for (var i in arrayUsers) {
 					console.warn(arrayUsers[i]);
@@ -127,6 +128,9 @@ ws.onmessage = function (message) {
 			break;
 		case 'callResponse':
 			callResponse(parsedMessage);
+			break;
+		case 'callResponseUserOccupied':
+			callResponseOccupied(parsedMessage);
 			break;
 		case 'incomingCall':
 			incomingCall(parsedMessage);
@@ -175,6 +179,13 @@ function callResponse(message) {
 				return console.error(error);
 		});
 	}
+}
+
+function callResponseOccupied(message) {
+	var innerHtml = "<strong>¡Vaya!</strong> Parece que <strong>" + message.response + "</strong> está ocupado...";
+	stop(true);
+	$("#occupied-warning").html(innerHtml);
+	$("#occupied-warning").show();
 }
 
 function startCommunication(message) {
@@ -244,7 +255,7 @@ function onOfferIncomingCall(error, offerSdp) {
 function register() {
 	var name = document.getElementById('name').value;
 	if (name == '') {
-		window.alert('You must insert your user name');
+		window.alert('Tienes que escribir tu nombre!');
 		return;
 	}
 	setRegisterState(REGISTERING);
@@ -258,6 +269,8 @@ function register() {
 }
 
 function callDropdown(name) {
+
+	hideWarning();
 
 	USER_SELECTED = name;
 
@@ -378,6 +391,10 @@ function enableButton(id, functionName) {
 
 function enableButton2(id) {
 	$(id).attr('disabled', false);
+}
+
+function hideWarning(){
+	$("#occupied-warning").hide();
 }
 
 /**

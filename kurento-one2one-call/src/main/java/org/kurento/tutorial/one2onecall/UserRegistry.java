@@ -54,6 +54,10 @@ public class UserRegistry {
   public boolean exists(String name) {
     return usersByName.keySet().contains(name);
   }
+  
+  public boolean isUserOccupied(String name){
+	  return usersOccupiedByName.keySet().contains(name);
+  }
 
   public UserSession removeBySession(WebSocketSession session) {
     final UserSession user = getBySession(session);

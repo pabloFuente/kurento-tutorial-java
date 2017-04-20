@@ -101,7 +101,7 @@ public class CallHandler extends TextWebSocketHandler {
 		  	  session.sendMessage(new TextMessage(response.toString()));
 	    	}
 	    	catch (Exception e){
-	    		System.out.println("ERROR FATAL: " + e);
+	    		System.out.println("FATAL ERROR: " + e);
 	    	}
 	      break;
       case "register":
@@ -176,15 +176,25 @@ public class CallHandler extends TextWebSocketHandler {
     JsonObject response = new JsonObject();
 
     if (registry.exists(to)) {
-      caller.setSdpOffer(jsonMessage.getAsJsonPrimitive("sdpOffer").getAsString());
-      caller.setCallingTo(to);
+		if (!registry.isUserOccupied(to)){
+			System.out.println("USER AVAILABLE!!!");
+			caller.setSdpOffer(jsonMessage.getAsJsonPrimitive("sdpOffer").getAsString());
+		      caller.setCallingTo(to);
+	
+		      response.addProperty("id", "incomingCall");
+		      response.addProperty("from", from);
+	
+		      UserSession callee = registry.getByName(to);
+		      callee.sendMessage(response);
+		      callee.setCallingFrom(from);
+		}
+		else{
+			System.out.println("USER OCCUPIED!!!");
+			response.addProperty("id", "callResponseUserOccupied");
+		    response.addProperty("response", to);
 
-      response.addProperty("id", "incomingCall");
-      response.addProperty("from", from);
-
-      UserSession callee = registry.getByName(to);
-      callee.sendMessage(response);
-      callee.setCallingFrom(from);
+		    caller.sendMessage(response);
+		}
     } else {
       response.addProperty("id", "callResponse");
       response.addProperty("response", "rejected: user '" + to + "' is not registered");
