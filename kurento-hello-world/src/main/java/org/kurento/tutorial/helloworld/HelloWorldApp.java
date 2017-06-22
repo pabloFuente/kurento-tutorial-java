@@ -32,23 +32,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
  * @since 5.0.0
  */
 @SpringBootApplication
-@EnableWebSocket
-public class HelloWorldApp implements WebSocketConfigurer {
-
-  @Bean
-  public HelloWorldHandler handler() {
-    return new HelloWorldHandler();
-  }
-
-  @Bean
-  public KurentoClient kurentoClient() {
-    return KurentoClient.create();
-  }
-
-  @Override
-  public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-    registry.addHandler(handler(), "/helloworld");
-  }
+public class HelloWorldApp {
 
   public static void main(String[] args) throws Exception {
     new SpringApplication(HelloWorldApp.class).run(args);

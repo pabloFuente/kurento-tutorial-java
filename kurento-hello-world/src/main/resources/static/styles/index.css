@@ -1,0 +1,13 @@
+.starter-template {
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.explanation {
+  margin-top: 20px;
+  margin-bottom: 50px;
+}
+
+nav {
+  border-radius: 0 !important;
+}

@@ -122,9 +122,13 @@ public class MagicMirrorHandler extends TextWebSocketHandler {
       FaceOverlayFilter faceOverlayFilter = new FaceOverlayFilter.Builder(pipeline).build();
 
       String appServerUrl = System.getProperty("app.server.url",
-          MagicMirrorApp.DEFAULT_APP_SERVER_URL);
-      faceOverlayFilter.setOverlayedImage(appServerUrl + "/img/mario-wings.png", -0.35F, -1.2F,
+          MagicMirrorApp.DEFAULT_APP_SERVER_URL) + "/img/mario-wings.png";
+      
+      
+      // CHANGE IMAGE
+      faceOverlayFilter.setOverlayedImage(appServerUrl, -0.35F, -1.2F,
           1.6F, 1.6F);
+      // CHANGE IMAGE
 
       webRtcEndpoint.connect(faceOverlayFilter);
       faceOverlayFilter.connect(webRtcEndpoint);
